@@ -1,88 +1,150 @@
 ﻿using Entities;
 using UnityEngine;
+using Entities;
+using Entities.Core.Input;
+using UnityEngine;
 
 public class ProvinceCollider : MonoBehaviour
 {
     [Header("Province Settings")]
-    [SerializeField] private int provinceId;
-    [SerializeField] private string provinceName;
     [SerializeField] private bool generateColliderOnStart = true;
+    [SerializeField] private Province provinceData;
     
-   
-    private GameObject tooltipPrefab => ProvinceInfo.Instance.TooltipPrefab;
+    [Header("Double Click Settings")]
+    [SerializeField] private float doubleClickTimeWindow = 0.3f;
+    
+    private float lastClickTime = 0f;
+    private bool waitingForDoubleClick = false;
 
     void Start()
     {
+        // Auto-find Province component if not assigned
+        if (provinceData == null)
+            provinceData = GetComponent<Province>();
+            
+        if (provinceData == null)
+        {
+            Debug.LogError($"ProvinceCollider on {gameObject.name} has no Province component!");
+            return;
+        }
+        
         if (generateColliderOnStart)
             GenerateProvinceCollider();
-        
-        
     }
     
     void GenerateProvinceCollider()
     {
         SpriteRenderer sr = GetComponent<SpriteRenderer>();
-        if (sr?.sprite == null) return;
+        if (sr?.sprite == null) 
+        {
+            Debug.LogWarning($"No sprite found for province {provinceData.getProvinceName()}");
+            return;
+        }
     
         // Remove existing collider if it exists
         PolygonCollider2D existingCollider = GetComponent<PolygonCollider2D>();
         if (existingCollider != null)
         {
-            Debug.Log($"Removing existing collider for: {provinceName}");
+            Debug.Log($"Removing existing collider for: {provinceData.getProvinceName()}");
             if (Application.isPlaying)
                 Destroy(existingCollider);
             else
-                DestroyImmediate(existingCollider); // For editor mode
+                DestroyImmediate(existingCollider);
         }
     
         // Always create a new collider
         PolygonCollider2D collider = gameObject.AddComponent<PolygonCollider2D>();
     
-        // Debug collider info
-        Debug.Log($"Province collider created for: {provinceName}");
-        Debug.Log($"Collider bounds: {collider.bounds}");
-        Debug.Log($"Collider enabled: {collider.enabled}");
-        Debug.Log($"GameObject layer: {gameObject.layer}");
+        Debug.Log($"Province collider created for: {provinceData.getProvinceName()}");
     }
     
-    void OnMouseDown()
-    {
-        Debug.Log($"Clicked on province: ");
-        // Province selection logic
-    }
+    // === MOUSE EVENT HANDLERS - ONLY EVENT FIRING ===
     
-    private GameObject activeTooltip; // Aktif tooltip referansı
-
     void OnMouseEnter()
     {
-        GetComponent<SpriteRenderer>().color = Color.yellow;
-    
-        // Tooltip oluştur
-        if (ProvinceInfo.Instance != null && activeTooltip == null)
-        {
-            activeTooltip = Instantiate(ProvinceInfo.Instance.TooltipPrefab);
-        
-            // Mouse pozisyonuna yerleştir
-            Vector3 mouseWorldPos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-            mouseWorldPos.z = 0;
-            activeTooltip.transform.position = mouseWorldPos + Vector3.up * 0.5f; // Biraz yukarıda
-        }
-        
-        
-        
-        
-        
+        // Only fire event - no logic here!
+        InputManager.Instance?.FireProvinceMouseEnter(provinceData);
     }
 
     void OnMouseExit()
     {
-        GetComponent<SpriteRenderer>().color = Color.white;
+        // Only fire event - no logic here!
+        InputManager.Instance?.FireProvinceMouseExit(provinceData);
+    }
     
-        // Tooltip'i yok et
-        if (activeTooltip != null)
+    void OnMouseDown()
+    {
+        if (Input.GetMouseButtonDown(0)) // Left click
         {
-            Destroy(activeTooltip);
-            activeTooltip = null;
+            HandleLeftClick();
         }
+        else if (Input.GetMouseButtonDown(1)) // Right click
+        {
+            InputManager.Instance?.FireProvinceRightClick(provinceData);
+        }
+    }
+    
+    void OnMouseOver()
+    {
+        // Continuous hover event
+        InputManager.Instance?.FireProvinceHover(provinceData);
+    }
+    
+    // Handle double click detection
+    private void HandleLeftClick()
+    {
+        float currentTime = Time.time;
+        
+        if (waitingForDoubleClick && (currentTime - lastClickTime) <= doubleClickTimeWindow)
+        {
+            // Double click detected
+            waitingForDoubleClick = false;
+            InputManager.Instance?.FireProvinceDoubleClick(provinceData);
+        }
+        else
+        {
+            // Single click (might become double)
+            lastClickTime = currentTime;
+            waitingForDoubleClick = true;
+            
+            // Start coroutine to handle single click after delay
+            StartCoroutine(HandleSingleClickDelayed());
+        }
+    }
+    
+    private System.Collections.IEnumerator HandleSingleClickDelayed()
+    {
+        yield return new WaitForSeconds(doubleClickTimeWindow);
+        
+        if (waitingForDoubleClick)
+        {
+            // It was indeed a single click
+            waitingForDoubleClick = false;
+            InputManager.Instance?.FireProvinceLeftClick(provinceData);
+        }
+    }
+    
+    // === UTILITY METHODS ===
+    
+    public void ForceGenerateCollider()
+    {
+        GenerateProvinceCollider();
+    }
+    
+    public Province GetProvinceData()
+    {
+        return provinceData;
+    }
+    
+    public void SetProvinceData(Province newProvinceData)
+    {
+        provinceData = newProvinceData;
+    }
+    
+    // For debugging
+    void OnValidate()
+    {
+        if (provinceData == null)
+            provinceData = GetComponent<Province>();
     }
 }

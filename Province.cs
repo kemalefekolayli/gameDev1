@@ -14,6 +14,12 @@ namespace Entities
         [SerializeField] SpriteRenderer provinceSprite;
 
 
+        public string getProvinceName()
+        {
+            return provinceName;
+        }
+
+        
     
     }
 }

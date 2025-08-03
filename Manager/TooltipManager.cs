@@ -8,83 +8,36 @@ namespace Features.Tooltip
     {
         [Header("Tooltip Settings")]
         [SerializeField] private GameObject tooltipPrefab;
-        [SerializeField] private Vector3 tooltipOffset = Vector3.up * 0.5f;
-        [SerializeField] private bool followMouse = false;
-        [SerializeField] private float followSpeed = 5f;
+        [SerializeField] private Vector3 tooltipPosition = new Vector3(0, 4, 0); // Ekranın üst ortası
         
-        [Header("Pool Settings")]
-        [SerializeField] private int poolSize = 5;
-        [SerializeField] private bool usePooling = true;
-        
-        private GameObject[] tooltipPool;
         private GameObject currentTooltip;
-        private Province currentProvince;
-        private bool tooltipActive = false;
-        
-        void Awake()
-        {
-            InitializeTooltipPool();
-        }
         
         void OnEnable()
         {
-            // Subscribe to input events
             InputManager.OnProvinceMouseEnter += ShowTooltip;
             InputManager.OnProvinceMouseExit += HideTooltip;
         }
         
         void OnDisable()
         {
-            // Unsubscribe from input events
             InputManager.OnProvinceMouseEnter -= ShowTooltip;
             InputManager.OnProvinceMouseExit -= HideTooltip;
         }
         
-        void Update()
-        {
-            if (followMouse && tooltipActive && currentTooltip != null)
-            {
-                UpdateTooltipPosition();
-            }
-        }
-        
-        void InitializeTooltipPool()
-        {
-            if (!usePooling || tooltipPrefab == null) return;
-            
-            tooltipPool = new GameObject[poolSize];
-            
-            for (int i = 0; i < poolSize; i++)
-            {
-                GameObject tooltip = Instantiate(tooltipPrefab);
-                tooltip.SetActive(false);
-                tooltipPool[i] = tooltip;
-            }
-            
-            Debug.Log($"[TooltipManager] Initialized pool with {poolSize} tooltips");
-        }
-        
         private void ShowTooltip(Province province)
         {
-            if (tooltipActive || province == null) return;
+            if (province == null || currentTooltip != null) return;
             
-            currentProvince = province;
-            
-            if (usePooling)
+            // Tooltip oluştur
+            if (tooltipPrefab != null)
             {
-                currentTooltip = GetPooledTooltip();
-            }
-            else
-            {
-                if (tooltipPrefab != null)
-                    currentTooltip = Instantiate(tooltipPrefab);
-            }
-            
-            if (currentTooltip != null)
-            {
-                SetupTooltip(province);
-                currentTooltip.SetActive(true);
-                tooltipActive = true;
+                currentTooltip = Instantiate(tooltipPrefab);
+                
+                // Sabit pozisyona yerleştir (ekranın üst ortası)
+                currentTooltip.transform.position = tooltipPosition;
+                
+                // İçeriği ayarla
+                SetTooltipContent(province);
                 
                 Debug.Log($"[TooltipManager] Showing tooltip for {province.getProvinceName()}");
             }
@@ -92,85 +45,40 @@ namespace Features.Tooltip
         
         private void HideTooltip(Province province)
         {
-            if (!tooltipActive || currentTooltip == null) return;
-            
-            if (usePooling)
+            if (currentTooltip != null)
             {
-                currentTooltip.SetActive(false);
+                Destroy(currentTooltip);
+                currentTooltip = null;
+                
+                Debug.Log($"[TooltipManager] Hiding tooltip");
+            }
+        }
+        
+        private void SetTooltipContent(Province province)
+        {
+            if (currentTooltip == null) return;
+            
+            // Text componentini bul ve province ismini yaz
+            var text = currentTooltip.GetComponentInChildren<UnityEngine.UI.Text>();
+            if (text != null)
+            {
+                text.text = province.getProvinceName();
             }
             else
             {
-                Destroy(currentTooltip);
-            }
-            
-            currentTooltip = null;
-            currentProvince = null;
-            tooltipActive = false;
-            
-            Debug.Log($"[TooltipManager] Hiding tooltip for {province.getProvinceName()}");
-        }
-        
-        
-        
-        private GameObject GetPooledTooltip()
-        {
-            if (tooltipPool == null) return null;
-            
-            for (int i = 0; i < tooltipPool.Length; i++)
-            {
-                if (tooltipPool[i] != null && !tooltipPool[i].activeInHierarchy)
+                // TextMeshPro dene
+                var tmpText = currentTooltip.GetComponentInChildren<TMPro.TextMeshProUGUI>();
+                if (tmpText != null)
                 {
-                    return tooltipPool[i];
+                    tmpText.text = province.getProvinceName();
                 }
             }
-            
-            // If no pooled tooltip available, create new one
-            Debug.LogWarning("[TooltipManager] No pooled tooltip available, creating new one");
-            return Instantiate(tooltipPrefab);
         }
         
-        // === PUBLIC METHODS ===
-        
-        public void SetTooltipPrefab(GameObject newPrefab)
+        // Tooltip pozisyonunu değiştirmek için
+        public void SetTooltipPosition(Vector3 position)
         {
-            tooltipPrefab = newPrefab;
-            if (usePooling)
-                InitializeTooltipPool();
-        }
-        
-
-        
-        public void SetTooltipOffset(Vector3 offset)
-        {
-            tooltipOffset = offset;
-        }
-        
-        public bool IsTooltipActive()
-        {
-            return tooltipActive;
-        }
-        
-        public Province GetCurrentProvince()
-        {
-            return currentProvince;
-        }
-        
-        // Force hide current tooltip
-        public void ForceHideTooltip()
-        {
-            if (currentProvince != null)
-                HideTooltip(currentProvince);
-        }
-        
-        // === EDITOR METHODS ===
-        
-        void OnValidate()
-        {
-            if (poolSize <= 0)
-                poolSize = 1;
-                
-            if (followSpeed < 0)
-                followSpeed = 0;
+            tooltipPosition = position;
         }
     }
 }

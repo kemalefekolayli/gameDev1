@@ -5,8 +5,8 @@ using UnityEngine;
 namespace Entities
 {
     public class Province : MonoBehaviour
-    {
-        private string provinceName { get; set; }
+    { 
+        [SerializeField] private string provinceName; 
         private string countryName { get; set; }
         private float provinceIncome { get; set; }
         private float provinceExpenses { get; set; }

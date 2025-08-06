@@ -52,5 +52,8 @@ namespace Entities
 
         public abstract void DeclareWar(AbstractCountry target);
         public abstract void SpecialAbility();
+        
+        public string GetCountryName()
+        {return this.nameCountry; }
     }
 }

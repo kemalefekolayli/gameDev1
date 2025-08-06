@@ -52,11 +52,13 @@ public class ProvinceCollider : MonoBehaviour
     // Mouse events - sadece event fire et
     void OnMouseEnter()
     {
+        GetComponent<SpriteRenderer>().color = Color.yellow;
         InputManager.Instance?.FireProvinceMouseEnter(provinceData);
     }
 
     void OnMouseExit()
     {
+        GetComponent<SpriteRenderer>().color = Color.white;
         InputManager.Instance?.FireProvinceMouseExit(provinceData);
     }
     

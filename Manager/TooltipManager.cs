@@ -8,8 +8,7 @@ namespace Features.Tooltip
     {
         [Header("Tooltip Settings")]
         [SerializeField] private GameObject tooltipPrefab;
-        [SerializeField] private Vector3 tooltipPosition = new Vector3(0, 4, 0); 
-        [SerializeField] private TooltipTextScript tooltipText;
+        [SerializeField] private Vector3 tooltipPosition = new Vector3(4.72f, 3.5f, 0); 
         private GameObject currentTooltip;
         
         void OnEnable()
@@ -51,7 +50,9 @@ namespace Features.Tooltip
         private void SetTooltipContent(Province province)
         {
             if (currentTooltip == null) return;
-            tooltipText.SetProvinceText(province.getProvinceName());
+            TooltipTextScript tooltipTextScript = currentTooltip.GetComponentInChildren<TooltipTextScript>();
+
+            tooltipTextScript.SetProvinceText(province);
             
         }
 
